@@ -1,0 +1,105 @@
+// Exemple de requête Atlas Vector Search avec filtrage de métadonnées
+var pipeline = new BsonDocument[]
+{
+    new BsonDocument("$vectorSearch", new BsonDocument
+    {
+        { "queryVector", new BsonArray(queryVector) },
+        { "path", _options.EmbeddingFieldName },
+        { "numCandidates", 100 },
+        { "limit", limit },
+        { "index", _options.VectorSearchIndexName },
+        { "filter", new BsonDocument // <-- AJOUTEZ CETTE CLASSE POUR FILTRER
+            {
+                { "metadata.numero_dossier", "VALEUR_RECHERCHEE_POUR_LE_DOSSIER" },
+                { "metadata.document_id", "AUTRE_VALEUR" }
+                // Ajoutez d'autres conditions de filtre ici
+            }
+        }
+    }),
+    new BsonDocument("$project", new BsonDocument
+    {
+        { _options.EmbeddingFieldName, 0 },
+        { "score", new BsonDocument("$meta", "vectorSearchScore") }
+    })
+};
+///////////////////////////////////////
+
+ [HttpPost("upload")]
+        public async Task<IActionResult> UploadDocument(
+         [FromForm] IEnumerable<IFormFile> files,
+        [FromForm] string documentId,
+        [FromForm] string numeroDossier,
+        [FromForm] string? metadata = null)
+        {
+            try
+            {
+
+                // Parser les métadonnées additionnelles si fournies
+                Dictionary<string, object>? additionalMetadata = null;
+                if (!string.IsNullOrWhiteSpace(metadata))
+                {
+                    additionalMetadata = System.Text.Json.JsonSerializer
+                        .Deserialize<Dictionary<string, object>>(metadata);
+                }
+
+
+                if (string.IsNullOrWhiteSpace(documentId))
+                {
+                    return BadRequest("L'ID du document est requis");
+                }
+
+                if (string.IsNullOrWhiteSpace(numeroDossier))
+                {
+                    return BadRequest("Le numéro de dossier est requis");
+                }
+
+                if (files == null || !files.Any()) // Vérifiez si la liste est vide
+                {
+                    return BadRequest("No files were uploaded.");
+                }
+
+                foreach (var file in files)
+                {
+                    if (file.Length == 0)
+                    {
+                        // Gérez les fichiers vides si nécessaire
+                        continue;
+                    }
+
+                    using var stream = file.OpenReadStream();
+
+                    var filesTypes = new[] { "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp" };
+                    if (!filesTypes.Contains(file.ContentType?.ToLowerInvariant()))
+                    {
+                        var mongoId = await _fileVectorService.UploadAndVectorizeFileAsync(
+                        stream,
+                        file.FileName,
+                        file.ContentType,
+                        documentId,
+                        numeroDossier,
+                        additionalMetadata);
+
+                       
+                    }
+
+                    else
+                    {
+                        var mongoId = await _imageVectorService.ProcessAndStoreImageAsync(
+                         file, documentId, numeroDossier, additionalMetadata);
+
+                       
+                    }
+                }
+
+
+                return Ok(new
+                {
+                    success = true,
+
+                    message = "Fichier uploadé et vectorisé avec succès",
+                    documentId = documentId,
+                    numeroDossier = numeroDossier,
+
+                });
+
+

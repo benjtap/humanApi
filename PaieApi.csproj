@@ -1,0 +1,79 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <NoWarn>$(NoWarn);CS8625</NoWarn>
+  </PropertyGroup>
+
+   <PropertyGroup>
+    <!-- BLOQUER TOUTE GÉNÉRATION AUTOMATIQUE -->
+    <EnableOpenApi>false</EnableOpenApi>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <EmitCompilerGeneratedFiles>false</EmitCompilerGeneratedFiles>
+    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="DBProviders\**" />
+    <Compile Remove="NewFolder\**" />
+    <EmbeddedResource Remove="DBProviders\**" />
+    <EmbeddedResource Remove="NewFolder\**" />
+    <None Remove="DBProviders\**" />
+    <None Remove="NewFolder\**" />
+      <Content Include="appsettings.json">
+    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+  </Content>
+  <Content Include="appsettings.Production.json">
+    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+  </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Controllers\DocumentsController.cs" />
+    <Compile Remove="Controllers\HybridController.cs" />
+    <Compile Remove="Controllers\MainController.cs" />
+    <Compile Remove="Controllers\NewController.cs" />
+    <Compile Remove="Models\BookRepository.cs" />
+    <Compile Remove="Models\IBookRepository.cs" />
+    <Compile Remove="Models\UserModel.cs" />
+    <Compile Remove="Services\AzureService.cs" />
+    <Compile Remove="Services\BaseRowService.cs" />
+    <Compile Remove="Services\FileSystemImageStorageService.cs" />
+    <Compile Remove="Services\FileVectorService.cs" />
+    <Compile Remove="Services\HybridSearchService.cs" />
+    <Compile Remove="Services\imageprocessService.cs" />
+    <Compile Remove="Services\ImageVectorService.cs" />
+    <Compile Remove="Services\IRepository.cs" />
+    <Compile Remove="Services\IServiceAuth.cs" />
+    <Compile Remove="Services\MyRepository.cs" />
+    <Compile Remove="Services\Repository.cs" />
+    <Compile Remove="Services\ServiceAuth.cs" />
+    <Compile Remove="Services\settings.cs" />
+    <Compile Remove="Services\VectorDBImage.cs" />
+    <Compile Remove="Services\VectoreDB.cs" />
+    <Compile Remove="Startup.cs" />
+    <Compile Remove="Utility.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Services\ImageVectorService.cs.old" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DocumentFormat.OpenXml" Version="3.3.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.4" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+    <PackageReference Include="Microsoft.Azure.CognitiveServices.Vision.ComputerVision" Version="7.0.1" />
+   
+    <PackageReference Include="MongoDB.Driver" Version="2.25.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="9.0.7" />
+
+    <PackageReference Include="Twilio" Version="7.14.0" />
+  </ItemGroup>
+
+</Project>

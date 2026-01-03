@@ -1,0 +1,237 @@
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using MongoDB.Bson;
+using MongoDB.Driver;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Webhttp.Models;
+
+namespace SelfApiproj.Services
+{// Service principal de gestion des images vectorielles
+
+
+    public interface IImageVectorService
+    {
+        Task<string> ProcessAndStoreImageAsync(IFormFile file, string documentId, string numeroDossier, Dictionary<string, object>? metadata = null);
+        Task<List<ImageDocument>> SearchSimilarAsync(string query, int limit = 10, float threshold = 0.7f);
+        Task<ImageDocument?> GetImageDocumentAsync(string documentId);
+        Task<bool> DeleteImageDocumentAsync(string documentId);
+        Task<List<ImageDocument>> GetImagesByDossierAsync(string numeroDossier);
+    }
+
+    public class ImageVectorService : IImageVectorService
+    {
+        private readonly IMongoCollection<ImageDocument> _collection;
+        private readonly IImageFileService _imageFileService;
+        private readonly IAzureOcrService _ocrService;
+        private readonly IEmbeddingService _embeddingService;
+        private readonly ILogger<ImageVectorService> _logger;
+
+        public ImageVectorService(
+            IOptions<MongoImageOptions> mongoOptions,
+            IImageFileService imageFileService,
+            IAzureOcrService ocrService,
+            IEmbeddingService embeddingService,
+            ILogger<ImageVectorService> logger)
+        {
+            var options = mongoOptions.Value;
+            var client = new MongoClient(options.ConnectionString);
+            var database = client.GetDatabase(options.DatabaseName);
+            _collection = database.GetCollection<ImageDocument>(options.CollectionName);
+
+            _imageFileService = imageFileService;
+            _ocrService = ocrService;
+            _embeddingService = embeddingService;
+            _logger = logger;
+
+            // Création des index
+            CreateIndexesAsync().GetAwaiter().GetResult();
+        }
+
+        public async Task<string> ProcessAndStoreImageAsync(IFormFile file, string documentId, string numeroDossier, Dictionary<string, object>? metadata = null)
+        {
+            var startTime = DateTime.UtcNow;
+
+            try
+            {
+                _logger.LogInformation("Début du traitement d'image pour le document {DocumentId}", documentId);
+
+                // 1. Sauvegarde du fichier image
+                var fileResult = await _imageFileService.SaveImageAsync(file, documentId, numeroDossier);
+
+                // 2. Extraction OCR
+                var imageBytes = await _imageFileService.GetImageBytesAsync(fileResult.RelativePath);
+                if (imageBytes == null)
+                    throw new InvalidOperationException("Impossible de lire l'image sauvegardée");
+
+                var ocrResult = await _ocrService.ExtractTextFromImageAsync(imageBytes);
+
+                // 3. Génération d'embeddings vectoriels
+                float[] textEmbedding = Array.Empty<float>();
+                if (!string.IsNullOrWhiteSpace(ocrResult.ExtractedText))
+                {
+                    var embedding = await _embeddingService.GenerateEmbeddingAsync(ocrResult.ExtractedText);
+                    textEmbedding = embedding.Select(d => (float)d).ToArray();
+                }
+
+                // 4. Création du document
+                var imageDocument = new ImageDocument
+                {
+                    DocumentId = documentId,
+                    NumeroDossier = numeroDossier,
+                    OriginalFileName = file.FileName,
+                    StoredFileName = fileResult.StoredFileName,
+                    RelativePath = fileResult.RelativePath,
+                    ThumbnailPath = fileResult.ThumbnailPath,
+                    ExtractedText = ocrResult.ExtractedText,
+                    TextEmbedding = textEmbedding,
+                    OcrConfidence = ocrResult.Confidence,
+                    FileSizeBytes = fileResult.FileSizeBytes,
+                    ImageWidth = fileResult.Width,
+                    ImageHeight = fileResult.Height,
+                    ContentType = "image/jpeg",
+                    UploadedAt = DateTime.UtcNow,
+                    Metadata = metadata ?? new Dictionary<string, object>(),
+                    ProcessingResult = new ImageProcessingResult
+                    {
+                        IsProcessed = true,
+                        ProcessingStatus = "Completed",
+                        ProcessedAt = DateTime.UtcNow,
+                        ProcessingDuration = DateTime.UtcNow - startTime
+                    }
+                };
+
+                // Ajout des métadonnées d'image
+                imageDocument.Metadata["original_file_name"] = file.FileName;
+                imageDocument.Metadata["content_type"] = file.ContentType;
+                imageDocument.Metadata["file_size"] = fileResult.FileSizeBytes;
+                imageDocument.Metadata["image_width"] = fileResult.Width;
+                imageDocument.Metadata["image_height"] = fileResult.Height;
+                imageDocument.Metadata["ocr_language"] = ocrResult.Language;
+                imageDocument.Metadata["ocr_confidence"] = ocrResult.Confidence;
+
+                // 5. Sauvegarde en base
+                await _collection.InsertOneAsync(imageDocument);
+
+                _logger.LogInformation("Image traitée avec succès pour le document {DocumentId}. Texte extrait: {TextLength} caractères",
+                    documentId, ocrResult.ExtractedText.Length);
+
+                return imageDocument.Id.ToString();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur lors du traitement de l'image pour le document {DocumentId}", documentId);
+                throw;
+            }
+        }
+
+        public async Task<List<ImageDocument>> SearchSimilarAsync(string query, int limit = 10, float threshold = 0.7f)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(query))
+                    return new List<ImageDocument>();
+
+                // Génération de l'embedding pour la requête
+                var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(query);
+                var queryVector = queryEmbedding.Select(d => (float)d).ToArray();
+
+                // Pipeline de recherche vectorielle
+                var pipeline = new[]
+                {
+                new BsonDocument("$vectorSearch", new BsonDocument
+                {
+                    { "index", "image_text_vector_index" },
+                    { "path", "TextEmbedding" },
+                    { "queryVector", new BsonArray(queryVector) },
+                    { "numCandidates", limit * 10 },
+                    { "limit", limit * 2 }
+                }),
+                new BsonDocument("$addFields", new BsonDocument
+                {
+                    { "score", new BsonDocument("$meta", "vectorSearchScore") }
+                }),
+                new BsonDocument("$match", new BsonDocument
+                {
+                    { "score", new BsonDocument("$gte", threshold) }
+                }),
+                new BsonDocument("$sort", new BsonDocument("score", -1)),
+                new BsonDocument("$limit", limit)
+            };
+
+                var results = await _collection.Aggregate<ImageDocument>(pipeline).ToListAsync();
+
+                _logger.LogInformation("Recherche vectorielle effectuée. {Count} résultats trouvés pour la requête: {Query}",
+                    results.Count, query);
+
+                return results;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur lors de la recherche vectorielle pour: {Query}", query);
+                throw;
+            }
+        }
+
+        public async Task<ImageDocument?> GetImageDocumentAsync(string documentId)
+        {
+            var filter = Builders<ImageDocument>.Filter.Eq(d => d.DocumentId, documentId);
+            return await _collection.Find(filter).FirstOrDefaultAsync();
+        }
+
+        public async Task<bool> DeleteImageDocumentAsync(string documentId)
+        {
+            var document = await GetImageDocumentAsync(documentId);
+            if (document == null)
+                return false;
+
+            // Suppression du fichier image
+            await _imageFileService.DeleteImageAsync(document.RelativePath);
+
+            // Suppression de la base de données
+            var filter = Builders<ImageDocument>.Filter.Eq(d => d.DocumentId, documentId);
+            var result = await _collection.DeleteOneAsync(filter);
+
+            return result.DeletedCount > 0;
+        }
+
+        public async Task<List<ImageDocument>> GetImagesByDossierAsync(string numeroDossier)
+        {
+            var filter = Builders<ImageDocument>.Filter.Eq(d => d.NumeroDossier, numeroDossier);
+            var sort = Builders<ImageDocument>.Sort.Descending(d => d.UploadedAt);
+
+            return await _collection.Find(filter).Sort(sort).ToListAsync();
+        }
+
+        private async Task CreateIndexesAsync()
+        {
+            try
+            {
+                // Index sur DocumentId
+                var documentIdIndex = Builders<ImageDocument>.IndexKeys.Ascending(d => d.DocumentId);
+                await _collection.Indexes.CreateOneAsync(new CreateIndexModel<ImageDocument>(documentIdIndex,
+                    new CreateIndexOptions { Name = "idx_document_id", Unique = true }));
+
+                // Index sur NumeroDossier
+                var dossierIndex = Builders<ImageDocument>.IndexKeys.Ascending(d => d.NumeroDossier);
+                await _collection.Indexes.CreateOneAsync(new CreateIndexModel<ImageDocument>(dossierIndex,
+                    new CreateIndexOptions { Name = "idx_numero_dossier" }));
+
+                // Index sur la date d'upload
+                var dateIndex = Builders<ImageDocument>.IndexKeys.Descending(d => d.UploadedAt);
+                await _collection.Indexes.CreateOneAsync(new CreateIndexModel<ImageDocument>(dateIndex,
+                    new CreateIndexOptions { Name = "idx_uploaded_at" }));
+
+                _logger.LogInformation("Index MongoDB créés avec succès");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Erreur lors de la création des index MongoDB");
+            }
+        }
+    }
+}

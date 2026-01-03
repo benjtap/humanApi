@@ -1,0 +1,25 @@
+# ASP.NET Core
+*.swp
+*.*~
+project.lock.json
+.project
+.classpath
+/obj/
+/bin/
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Secrets and Config
+appsettings.json
+appsettings.Development.json
+appsettings.Production.json
+secrets.json
+
+# Tooling
+.vscode/
+.idea/
