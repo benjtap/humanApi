@@ -23,3 +23,4 @@ secrets.json
 # Tooling
 .vscode/
 .idea/
+.vs/

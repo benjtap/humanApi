@@ -147,6 +147,14 @@ builder.Services.AddScoped<AuthService>(sp =>
     );
 });
 
+builder.Services.AddScoped<ShiftService>();
+builder.Services.AddScoped<WeeklyPlanService>();
+builder.Services.AddScoped<ExcelService>();
+builder.Services.AddScoped<ShiftTypeService>();
+builder.Services.AddScoped<SettingsService>();
+builder.Services.AddScoped<AdditionDeductionService>();
+builder.Services.AddScoped<SystemDataService>();
+
 // JWT Service
 builder.Services.AddScoped<JwtService>();
 

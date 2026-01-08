@@ -13,8 +13,6 @@ namespace PaieApi.DTOs
         public string Username { get; set; }
 
         [Required(ErrorMessage = "Le numéro de téléphone est requis")]
-        [RegularExpression(@"^\+972(50|52|53|54|55|58)\d{7}$",
-            ErrorMessage = "Format israélien invalide. Ex: +972501234567")]
         public string Telephone { get; set; }
     }
 

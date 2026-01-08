@@ -158,7 +158,25 @@ public class AuthController : ControllerBase
             });
         }
 
-        var (succes, message) = await _authService.DemanderConnexion(request.Username);
+        var (succes, message, utilisateur) = await _authService.DemanderConnexion(request.Username);
+
+        if (succes && utilisateur != null)
+        {
+             // Connexion directe réussie (car déjà vérifié)
+             var token = _jwtService.GenerateToken(utilisateur);
+             var utilisateurDto = await _authService.ObtenirUtilisateurDto(request.Username);
+
+             return Ok(new AuthResponse
+             {
+                 Succes = true,
+                 Message = "Connexion reussie (Vérifié)",
+                 Data = new ConnexionResponse
+                 {
+                     Token = token,
+                     Utilisateur = utilisateurDto
+                 }
+             });
+        }
 
         return Ok(new AuthResponse
         {
