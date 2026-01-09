@@ -23,9 +23,7 @@
     <EmbeddedResource Remove="NewFolder\**" />
     <None Remove="DBProviders\**" />
     <None Remove="NewFolder\**" />
-      <Content Include="appsettings.json">
-    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-  </Content>
+
   </ItemGroup>
 
   <ItemGroup>
