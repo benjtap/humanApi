@@ -15,9 +15,11 @@ project.lock.json
 *.sln.docstates
 
 # Secrets and Config
+# appsettings.json - Un-ignored for deployment
 appsettings.json
 appsettings.Development.json
 appsettings.Production.json
+#appsettings.Production.json - Un-ignored for deployment
 secrets.json
 
 # Tooling
