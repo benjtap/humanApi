@@ -41,7 +41,7 @@ namespace PaieApi.Services
                 audience: _configuration["Jwt:Audience"],
                 claims: claims,
                 expires: DateTime.UtcNow.AddHours(
-                    int.Parse(_configuration["Jwt:ExpirationHours"])
+                    int.TryParse(_configuration["Jwt:ExpirationHours"], out int hours) ? hours : 24
                 ),
                 signingCredentials: credentials
             );
