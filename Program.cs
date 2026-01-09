@@ -67,7 +67,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend",
         policy =>
         {
-            policy.WithOrigins("http://localhost:5173", "http://localhost:8080", "https://selfapproj.onrender.com") // Ajoutez vos URLs frontend
+            policy.AllowAnyOrigin() // Permet l'accès depuis n'importe quelle source
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         });
