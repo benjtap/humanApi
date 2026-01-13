@@ -40,8 +40,15 @@ namespace PaieApi.Controllers
             // Generate ID if missing (Mongo usually handles it but good to be safe if model requires it)
             // But Mongo driver handles null Id by generating one.
             
-            var createdShift = await _shiftService.CreateShiftAsync(shift);
-            return CreatedAtAction(nameof(GetShift), new { id = createdShift.Id }, createdShift);
+            try
+            {
+                var createdShift = await _shiftService.CreateShiftAsync(shift);
+                return CreatedAtAction(nameof(GetShift), new { id = createdShift.Id }, createdShift);
+            }
+            catch (System.InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
         }
 
         [HttpGet("{id}")]
