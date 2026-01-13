@@ -63,6 +63,44 @@ public class AuthController : ControllerBase
         });
     }
 
+    /// <summary>
+    /// Inscription d'un nouvel utilisateur (Israël)
+    /// </summary>
+    [HttpPost("InscriptionIsrael")]
+    [ProducesResponseType(typeof(AuthResponse), 200)]
+    [ProducesResponseType(400)]
+    public async Task<IActionResult> InscriptionIsrael([FromBody] InscriptionRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Username) ||
+            string.IsNullOrWhiteSpace(request.Telephone))
+        {
+            return BadRequest(new AuthResponse
+            {
+                Succes = false,
+                Message = "Username et téléphone requis"
+            });
+        }
+
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+        _logger.LogInformation($"Tentative d'inscription (IL): {request.Username} depuis {ipAddress}");
+
+        var (succes, message) = await _authService.InscriptionIsrael(
+            request.Username,
+            request.Telephone
+        );
+
+        if (succes)
+        {
+            _logger.LogInformation($"Inscription (IL) réussie: {request.Username}");
+        }
+
+        return Ok(new AuthResponse
+        {
+            Succes = succes,
+            Message = message
+        });
+    }
+
 
 
 
