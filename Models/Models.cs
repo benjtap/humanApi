@@ -226,6 +226,9 @@ namespace PaieApi.Models
 
         [BsonElement("taxSettings")]
         public TaxSettings TaxSettings { get; set; }
+
+        [BsonElement("generalSettings")]
+        public GeneralSettings GeneralSettings { get; set; }
     }
 
     public class TaxSettings
@@ -327,4 +330,51 @@ namespace PaieApi.Models
         public string? UserId { get; set; } // Optional
     }
 
+    public class GeneralSettings
+    {
+        [BsonElement("pushNotifications")]
+        public bool PushNotifications { get; set; }
+
+        [BsonElement("workTimeMinutes")]
+        public int WorkTimeMinutes { get; set; }
+
+        [BsonElement("fixedBreak")]
+        public bool FixedBreak { get; set; }
+
+        [BsonElement("fixedBreakMinutes")]
+        public int FixedBreakMinutes { get; set; }
+
+        [BsonElement("recuperationValue")]
+        public decimal RecuperationValue { get; set; }
+
+        [BsonElement("allowUnpaidLeave")]
+        public bool AllowUnpaidLeave { get; set; }
+
+        [BsonElement("vacationDay")]
+        public DaySetting VacationDay { get; set; }
+
+        [BsonElement("holiday")]
+        public DaySetting Holiday { get; set; }
+
+        [BsonElement("sickDay1")]
+        public DaySetting SickDay1 { get; set; }
+
+        [BsonElement("sickDay2")]
+        public DaySetting SickDay2 { get; set; }
+
+        [BsonElement("sickDay3")]
+        public DaySetting SickDay3 { get; set; }
+
+        [BsonElement("sickDay4")]
+        public DaySetting SickDay4 { get; set; }
+    }
+
+    public class DaySetting
+    {
+        [BsonElement("hours")]
+        public string Hours { get; set; }
+
+        [BsonElement("percent")]
+        public decimal Percent { get; set; }
+    }
 }

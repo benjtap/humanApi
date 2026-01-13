@@ -65,7 +65,7 @@ namespace PaieApi.Services
                     ValidateAudience = true,
                     ValidAudience = _configuration["Jwt:Audience"],
                     ValidateLifetime = true,
-                    ClockSkew = TimeSpan.Zero
+                    ClockSkew = TimeSpan.FromMinutes(5)
                 }, out SecurityToken validatedToken);
 
                 return principal;

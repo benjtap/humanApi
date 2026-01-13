@@ -1,0 +1,24 @@
+peux tu verifier dans הוספה הורדה que tout fonctionne au niveau vuex store action dispatch et appel axios vers le controller
+
+Sanitize: Create a copy of the item (apiItem), map the temporary frontend 
+id
+ to frontendId, and delete the 
+id
+ field. This ensures the payload sent to the backend allows MongoDB to autogenerate a valid ObjectId.
+Sync: Upon successful creation, it captures the response from the backend (which contains the new real 
+id
+) and updates the local item in the store via 
+UPDATE_ADDITION_DEDUCTION
+. This ensures that subsequent actions like Delete will use the correct backend ID.
+Error Handling: Added try/catch blocks to 
+add
+, 
+update
+, and 
+delete
+ actions to prevent unhandled promise rejections.
+I verified the Axios service (
+additionDeductionService.js
+) and Controller (
+AdditionsDeductionsController.cs
+) and they appear correct and aligned with these changes. The flow is now robust.
