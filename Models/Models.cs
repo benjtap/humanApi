@@ -294,6 +294,9 @@ namespace PaieApi.Models
         [BsonElement("shiftId")] // Optional filter
         public int? ShiftId { get; set; }
 
+        [BsonElement("shiftIds")]
+        public List<string>? ShiftIds { get; set; }
+
         [BsonElement("frontendId")]
         public string FrontendId { get; set; } // To sync with frontend GUIDs if needed
     }
